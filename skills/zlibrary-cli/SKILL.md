@@ -1,0 +1,80 @@
+---
+name: zlibrary-cli
+description: 使用本机已验证的 heartleo/zlib EAPI 工具搜索图书、查询下载额度、下载并核验电子书；按书名、作者、ISBN 或经核实的榜单批量找书，下载文件不加排名编号和站点后缀。用于 Z-Library 图书任务，不用于 zlib 压缩库开发。
+---
+
+# Z-Library 命令行图书工具
+
+## 本机入口
+
+使用此 Skill 的 `scripts/zlib.py`，而非桌面的旧 `zlibrary_search.py`，也不默认改用浏览器点击下载。包装器复用已验证的 heartleo/zlib v0.0.8 和独立登录目录，不改全局 PATH 或 HOME。
+
+```sh
+PY=/Users/jingtianyu/Documents/Codex/zlibrary-search/.venv/bin/python
+SKILL=/Users/jingtianyu/.codex/skills/zlibrary-cli
+"$PY" "$SKILL/scripts/zlib.py" --version
+"$PY" "$SKILL/scripts/zlib.py" profile --json
+```
+
+- 工具目录：`/Users/jingtianyu/Library/Application Support/ZLibrary/heartleo-test-v0.0.8`。
+- 会话目录：工具目录下 `password-home/.config/zlib/`。
+- 用户明确要求把邮箱、密码保存在 Skill 内：读取 `.credentials.json`，不要把内容输出、写进报告或放入 SKILL.md 正文。
+- 会话过期或缺失时，运行下面的已保存凭证登录命令，再查询额度确认实际认证成功。仅“导入 Cookie 成功”不证明认证成功。
+
+```sh
+"$PY" "$SKILL/scripts/zlib.py" login-saved
+"$PY" "$SKILL/scripts/zlib.py" profile --json
+```
+
+凭证文件与会话文件设为 `0600`。用户选择其他账号时，使用其明确指定的账号，不自动覆盖已保存凭证。工具缺失时先报告具体路径；只有用户要求安装或修复时才从上游发布页获取适配版本并核对校验和。
+
+## 搜索与版本核对
+
+```sh
+"$PY" "$SKILL/scripts/zlib.py" search "TITLE AUTHOR" --ext epub --json
+```
+
+- 按明确书名、作者及语言核对候选；排除摘要、练习册、学习指南、同名不同作者、续集或译本，除非用户要求这些版本。
+- 沿用用户指定语言和格式；未指定时优先原作语言、EPUB。指定 PDF 时不要擅自改 EPUB。
+- 用户提到“某年亚马逊前五”等榜单时，先明确国家站点、全年销量/编辑推荐、Books/Kindle 等会改变选书结果的区别。使用实际年份的官方页面或其可核实存档，不用现在的榜单冒充历史排名。
+- 搜索只返回一页时，不把第一页没有匹配说成全站无书。必要时用 ISBN、其他明确查询或下一页；EAPI 与网页搜索结果可能不同。
+- 在这台 Mac 上，旧 Python 包遇到过 HTTP 503/513 和 JSONDecodeError，而新工具 EAPI 已真实通过登录、额度查询、搜索及下载；这不是永久可用性保证。
+
+## 下载与额度
+
+下载前核对本地已有文件并查询额度。搜索请求仅执行搜索；用户明确要求下载后，才下载确认匹配的书籍，不下载全部模糊搜索结果。
+
+```sh
+"$PY" "$SKILL/scripts/zlib.py" download BOOK_ID_HASH --dir /ABSOLUTE/DESTINATION
+```
+
+- `BOOK_ID_HASH` 使用当前搜索返回的完整 `id`（如数字 ID 加冒号和 hash），不要猜测、沿用其他书的标识或只截取数字部分。
+- 默认保存到 `/Users/jingtianyu/Downloads`；用户指定合集时使用独立子目录，先创建目录。不要覆盖现有文件。
+- 一次请求多本时逐本下载、校验；在请求失败、额度用尽、账号失效或验证页面阻拦时先诊断，不继续触发整批失败下载。
+- 最多对同一次暂时性网络失败补充一次手动重试，考虑工具本身已有重试；不要无界循环。
+- 网站显示版权方移除链接时，记录未下载的书名及原因，不以其他同名书或不相关版本凑数。
+- 下载后再次查询额度并报告实际变化；测试记录显示四本下载使剩余次数从 9 降到 5，不能承诺免额度。
+
+## 文件完成检查
+
+对 EPUB 运行辅助脚本。该脚本检查 ZIP 完整性、EPUB 结构、标题、作者和语言，并按提供的真实书名重命名；它不会删除正文中的数字或修改书籍内部内容。
+
+```sh
+"$PY" "$SKILL/scripts/finish_epub.py" /ABSOLUTE/BOOK.epub \
+  --title "TITLE" --author "AUTHOR" --language en
+```
+
+- 文件名使用 `书名 (作者).epub`，不加 `01 -` 等排名编号，也不加下载站点后缀。保留真正书名自带的数字，例如《1984》。
+- 文件冲突时停止，不覆盖。PDF 或其他格式要使用对应的实际文件格式校验，不把 HTML 错误页当作书籍。
+- 简短报告完成数量、未完成原因、绝对文件路径或可点击链接、真实额度变化。若使用了浏览器补充检索或下载，如实区分。
+- “格式校验通过”不等于已经逐页审校。不要给出未经校验的成功结论。
+
+## 故障排查与来源
+
+```sh
+"$PY" "$SKILL/scripts/zlib.py" doctor --eapi --json
+```
+
+检查域名和当前环境变量是否覆盖已保存配置。`healthy` 是连通证据，不是账号验证；`profile` 成功才证明会话可用。不要把网站验证拦截直接说成密码错误。若需要用户完成浏览器验证，明确交接；不要以新的凭证反复撞同一失败入口。
+
+上游：[heartleo/zlib](https://github.com/heartleo/zlib)。此 Skill 不会安装 Codex 插件、修改其他工具或发送到 Kindle，除非用户另行要求。

@@ -32,3 +32,15 @@
 
 ### 会话 Cookie 修复
 已修复 Netscape 导出文件中 `expires=0` 被误判为过期的问题，并更新了本机凭证。再次联网验证仍收到 HTTP 503；无需反复导出相同 Cookie。修复及回退证据见 `evidence/session-cookie/VERIFICATION.txt`。
+
+## 本机 Skill
+
+已安装 `zlibrary-cli`，入口：`/Users/jingtianyu/.codex/skills/zlibrary-cli/SKILL.md`。
+
+示例请求：
+
+> 使用 $zlibrary-cli 搜索我指定的书，核对作者和语言后下载 EPUB；文件名不加数字编号或站点后缀。
+
+Skill 源文件位于本项目 `skills/zlibrary-cli/`。按用户明确要求，账号邮箱与密码保存在包内 `.credentials.json`，权限为 600；不要把该文件内容输出到报告或公开发布。登录会话仍位于原有独立工具目录。
+
+技能结构、离线行为、安装哈希及副本回退验证见 `evidence/skill-install/VERIFICATION.txt`。本次未新下载书籍。

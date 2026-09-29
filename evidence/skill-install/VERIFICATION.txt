@@ -1,0 +1,47 @@
+分支：feature/zlibrary-skill
+变更：新增自动发现的 zlibrary-cli Skill、已保存凭证登录包装器、EPUB 核验与无编号命名。
+MODIFIED_FILE=/Users/jingtianyu/.codex/skills/zlibrary-cli/SKILL.md
+DIFF_FILE=/Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/skill-install/DIFF_FILE.patch
+VERIFICATION=/Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/skill-install/VERIFICATION.txt
+ROLLBACK=/Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/skill-install/ROLLBACK.sh
+BASELINE_COMMAND: test -e /Users/jingtianyu/.codex/skills/zlibrary-cli/SKILL.md
+BASELINE_INPUT: 安装前路径
+BASELINE_OUTPUT: （空）
+BASELINE_EXIT: 1
+原脚本保持不变；SHA256 见 original-script.sha256。
+凭证由用户要求保存于 Skill 的 .credentials.json，权限 600；补丁不包含明文凭证。
+
+MODIFIED
+COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/.venv/bin/python /Users/jingtianyu/.codex/skills/.system/skill-creator/scripts/quick_validate.py /Users/jingtianyu/.codex/skills/zlibrary-cli
+INPUT: 已安装 Skill；行为测试使用模拟 EPUB 和离线 CLI。
+OUTPUT: Skill is valid!
+EXIT: 0
+
+BEHAVIOR
+COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/.venv/bin/python /Users/jingtianyu/Documents/Codex/zlibrary-search/tests/test_zlibrary_skill.py /Users/jingtianyu/.codex/skills/zlibrary-cli
+INPUT: 已安装 Skill；行为测试使用模拟 EPUB 和离线 CLI。
+OUTPUT: PASS: EPUB validation, identity checks, no-overwrite rename, numeric title preservation, isolated CLI and credential redaction
+EXIT: 0
+
+VERSION
+COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/.venv/bin/python /Users/jingtianyu/.codex/skills/zlibrary-cli/scripts/zlib.py --version
+INPUT: 已安装 Skill；行为测试使用模拟 EPUB 和离线 CLI。
+OUTPUT: zlib version 0.0.8
+EXIT: 0
+
+ROLLBACK_COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/skill-install/ROLLBACK.sh /var/folders/gd/1mtztc856mx63qjf77yx_nnw0000gn/T/zlibrary-skill-rollback-sigtm02n/zlibrary-cli /var/folders/gd/1mtztc856mx63qjf77yx_nnw0000gn/T/zlibrary-skill-rollback-sigtm02n/archive
+ROLLBACK_INPUT: 已安装 Skill 的另一副本
+ROLLBACK_OUTPUT: ROLLBACK PASS: skill removed from discovery; files and credentials preserved
+ROLLBACK_EXIT: 0
+恢复状态：测试副本退出发现目录，所有文件含凭证仍完整保留；实际安装保持可用。
+安装源与已安装文件逐个 SHA256 一致，共 5 个文件。
+真实 login-saved 登录和 profile 查询另见本次执行结果；未新下载图书。
+
+真实登录命令：.venv/bin/python /Users/jingtianyu/.codex/skills/zlibrary-cli/scripts/zlib.py login-saved
+输入：用户要求保存在 Skill 内的邮箱密码；不在报告显示。
+输出：✓ Logged in successfully.
+退出码：0
+真实额度查询命令：.venv/bin/python /Users/jingtianyu/.codex/skills/zlibrary-cli/scripts/zlib.py profile --json
+输出：{"daily_amount":5,"daily_allowed":999,"daily_remaining":994,"daily_reset":""}
+退出码：0
+此为本次服务端返回值，不推断额度变化原因，也不代表工具取消额度限制。

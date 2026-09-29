@@ -1,0 +1,7 @@
+{
+  ".credentials.json": "b0f57e477da68f35ac9ce60a7df98cf9df5a2201f2c0ac40d93286805c473836",
+  "SKILL.md": "4fcd53b8ddb9abab7fb57e873e98758becea17b457d60ed4443ea93226ec303a",
+  "agents/openai.yaml": "163946d8f9f850027d45a60621ddf729b512f4d014bce3b0514f94a7990bd1e6",
+  "scripts/finish_epub.py": "1cb9aef74467e87ac18bb1ca7f97780fb1da2a7b9e0f664db02e042f85d6004d",
+  "scripts/zlib.py": "7b2ff33b22f7ee73d0777e365830060ceb5080a86e64c31296fcdfa163418d17"
+}

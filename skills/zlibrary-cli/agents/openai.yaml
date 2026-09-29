@@ -1,0 +1,6 @@
+interface:
+  display_name: "Z-Library 图书下载"
+  short_description: "使用已验证的命令行工具搜索、下载电子书，核验版本和文件并报告额度"
+  default_prompt: "使用 $zlibrary-cli 查找我指定的书籍；在我要求下载时保存原版电子书，去掉文件编号和站点后缀，并核验文件与额度。"
+policy:
+  allow_implicit_invocation: true
