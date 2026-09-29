@@ -1,0 +1,2 @@
+Skill installation baseline: /Users/jingtianyu/.codex/skills/zlibrary-cli does not exist.
+Original source script remains unchanged.
