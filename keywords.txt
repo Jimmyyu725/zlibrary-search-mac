@@ -1,0 +1,4 @@
+# 每行一个关键词；修改后保存，再双击启动。
+machine learning
+金融學
+Python

@@ -1,0 +1,157 @@
+--- /Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/ORIGINAL.py
++++ /Users/jingtianyu/Documents/Codex/zlibrary-search/zlibrary_search.py
+@@ -11,10 +11,15 @@
+ 檔案存入 downloads。鏈結可能失效；登入頁面或錯誤頁面不會當作書籍保存。
+ """
+ 
++import argparse
+ import asyncio
++from datetime import datetime
++from importlib.metadata import version
+ import csv
+ import getpass
+ import hashlib
++import http.cookiejar
++from http.cookies import SimpleCookie
+ import inspect
+ import os
+ import re
+@@ -27,6 +32,8 @@
+ KEYWORDS_FILE = Path(__file__).with_name("keywords.txt")
+ OUTPUT_FILE = Path(__file__).with_name("zlibrary_results.csv")
+ DOWNLOAD_DIR = Path(__file__).with_name("downloads")
++COOKIE_FILE = Path.home() / "Library/Application Support/ZLibrary/cookies.txt"
++COOKIE_MIRROR = "https://zh.z-lib.gd"
+ AUTO_DOWNLOAD = True
+ MAX_FILE_BYTES = 512 * 1024 * 1024
+ DOWNLOAD_TIMEOUT = 300.0
+@@ -244,38 +251,89 @@
+     return failures
+ 
+ 
+-async def main():
++def load_cookie_jar(path):
++    import aiohttp
++    from yarl import URL
++
++    saved = http.cookiejar.MozillaCookieJar(str(path))
++    saved.load(ignore_discard=True)
++    jar = aiohttp.CookieJar()
++    for cookie in saved:
++        domain = cookie.domain.lstrip(".")
++        if domain != "z-lib.gd" and not domain.endswith(".z-lib.gd"):
++            continue
++        entry = SimpleCookie()
++        entry[cookie.name] = cookie.value
++        if cookie.domain_specified:
++            entry[cookie.name]["domain"] = cookie.domain
++        entry[cookie.name]["path"] = cookie.path
++        entry[cookie.name]["secure"] = cookie.secure
++        jar.update_cookies(entry, response_url=URL("https://" + domain))
++    usable = jar.filter_cookies(URL(COOKIE_MIRROR))
++    if not all(usable.get(key) for key in ("remix_userid", "remix_userkey")):
++        raise ValueError("登录 Cookie 缺失或已过期")
++    return jar
++
++
++async def main(search_only=False, check=False, check_login=False, cookie_file=COOKIE_FILE):
+     import aiohttp
+     from yarl import URL
+     import zlibrary
++    from zlibrary.profile import ZlibProfile
++
++    if check:
++        assert callable(zlibrary.AsyncZlib.login)
++        assert callable(zlibrary.AsyncZlib.search)
++        print(f"环境检查通过：Python {sys.version.split()[0]}；zlibrary {version('zlibrary')}")
++        return 0
+ 
+     lines = (KEYWORDS_FILE.read_text(encoding="utf-8-sig").splitlines()
+              if KEYWORDS_FILE.exists() else KEYWORDS)
+     keywords = list(dict.fromkeys(line.strip() for line in lines
+                                  if line.strip() and not line.lstrip().startswith("#")))
+     if not keywords:
+-        raise ValueError("關鍵字清單為空")
+-    if OUTPUT_FILE.exists():
+-        print(f"請先重新命名或移走既有檔案：{OUTPUT_FILE}", file=sys.stderr)
+-        return 1
+-    email = os.environ.get("ZLIB_EMAIL") or input("Z-Library 電子郵件：").strip()
+-    password = os.environ.get("ZLIB_PASSWORD") or getpass.getpass("密碼：")
++        raise ValueError("关键词清单为空")
++    output = OUTPUT_FILE
++    if output.exists():
++        stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
++        output = output.with_name(f"{output.stem}_{stamp}{output.suffix}")
+     lib = zlibrary.AsyncZlib()
+     try:
+-        await asyncio.wait_for(lib.login(email, password), REQUEST_TIMEOUT)
+-        # Cookie 綁定登入後的主機；重新導向到其他主機不會帶走帳號 Cookie。
+-        jar = aiohttp.CookieJar()
+-        jar.update_cookies(lib.cookies or {}, response_url=URL(lib.mirror))
++        if cookie_file.exists():
++            jar = load_cookie_jar(cookie_file)
++            lib.mirror = COOKIE_MIRROR
++            lib.cookies = {key: value.value for key, value in
++                           jar.filter_cookies(URL(lib.mirror)).items()}
++            print("已载入本机登录 Cookie。")
++        else:
++            email = os.environ.get("ZLIB_EMAIL") or input("Z-Library 邮箱：").strip()
++            password = os.environ.get("ZLIB_PASSWORD") or getpass.getpass("密码：")
++            await asyncio.wait_for(lib.login(email, password), REQUEST_TIMEOUT)
++            jar = aiohttp.CookieJar()
++            jar.update_cookies(lib.cookies or {}, response_url=URL(lib.mirror))
+         timeout = aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT, sock_read=60)
+         async with aiohttp.ClientSession(cookie_jar=jar, timeout=timeout,
+                                          auto_decompress=False,
+                                          headers={'User-Agent': 'Mozilla/5.0',
+                                                   'Accept-Encoding': 'identity'}) as session:
+-            downloader = Downloader(session, DOWNLOAD_DIR) if AUTO_DOWNLOAD else None
+-            failures = await export(lib, keywords, OUTPUT_FILE, downloader)
+-        print(f"CSV：{OUTPUT_FILE}")
+-        print(f"下載資料夾：{DOWNLOAD_DIR}")
+-        print(f"失敗操作：{failures}；缺少鏈結請查看 status 欄位。")
++            async def request(url):
++                # Scope authentication to the imported cookie domains, including redirects.
++                async with session.get(url, auto_decompress=True,
++                                       timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)) as response:
++                    response.raise_for_status()
++                    return await response.text()
++
++            lib._r = request
++            lib.profile = ZlibProfile(request, lib.cookies, lib.mirror, lib.mirror)
++            if check_login:
++                limits = await asyncio.wait_for(lib.profile.get_limits(), REQUEST_TIMEOUT)
++                print(f"登录验证通过：今日剩余下载次数 {limits['daily_remaining']}")
++                return 0
++            downloader = Downloader(session, DOWNLOAD_DIR) if AUTO_DOWNLOAD and not search_only else None
++            failures = await export(lib, keywords, output, downloader)
++        print(f"CSV：{output}")
++        print(f"下载文件夹：{DOWNLOAD_DIR}")
++        print(f"失败操作：{failures}；缺少链接请查看 status 字段。")
+         return 2 if failures else 0
+     finally:
+         close = getattr(lib, "aclose", None) or getattr(lib, "close", None)
+@@ -286,12 +344,21 @@
+ 
+ 
+ if __name__ == "__main__":
++    parser = argparse.ArgumentParser(description="批量搜索、下载并导出 CSV")
++    parser.add_argument("--check", action="store_true", help="检查本地环境，不登录或联网")
++    parser.add_argument("--search-only", action="store_true", help="仅导出搜索结果，不下载")
++    parser.add_argument("--check-login", action="store_true", help="联网验证登录，不下载")
++    parser.add_argument("--cookie-file", type=Path, default=COOKIE_FILE, help="Netscape Cookie 文件路径")
++    args = parser.parse_args()
+     try:
+-        sys.exit(asyncio.run(main()))
++        sys.exit(asyncio.run(main(search_only=args.search_only, check=args.check,
++                                  check_login=args.check_login, cookie_file=args.cookie_file)))
+     except KeyboardInterrupt:
+         print("已停止；已寫入的 CSV 結果會保留。", file=sys.stderr)
+         sys.exit(130)
+     except Exception as exc:
+-        print(f"執行失敗：{type(exc).__name__}。請檢查套件、網路和登入狀態。",
++        status = getattr(exc, "status", None)
++        detail = f"；HTTP {status}" if status else ""
++        print(f"运行失败：{type(exc).__name__}{detail}。请检查网络或登录状态。",
+               file=sys.stderr)
+         sys.exit(1)

@@ -1,0 +1,66 @@
+项目：/Users/jingtianyu/Documents/Codex/zlibrary-search
+分支：feature/macos-setup
+变更：main Cookie 登录分支；load_cookie_jar；--check/--check-login/--search-only；已存在 CSV 改为时间戳新文件。
+MODIFIED_FILE=/Users/jingtianyu/Documents/Codex/zlibrary-search/zlibrary_search.py
+DIFF_FILE=/Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/DIFF_FILE.patch
+VERIFICATION=/Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/VERIFICATION.txt
+ROLLBACK=/Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/ROLLBACK.sh
+原文件 SHA256=1a5f0ebaf31310c10a3c714d8ea4e69df5f25ecc1cc62f226d94a7286b8ec269
+桌面原件 SHA256=1a5f0ebaf31310c10a3c714d8ea4e69df5f25ecc1cc62f226d94a7286b8ec269
+
+BASELINE
+COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/.venv/bin/python /Users/jingtianyu/Documents/Codex/zlibrary-search/test_local.py /Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/ORIGINAL.py
+INPUT: 本地模拟关键词 A/B、伪 PDF、HTML、HTTP 429；无外网书籍下载
+OUTPUT:
+PASS: local search/export/download/error handling
+COOKIE_SUPPORT=False
+EXIT: 0
+
+MODIFIED
+COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/.venv/bin/python /Users/jingtianyu/Documents/Codex/zlibrary-search/test_local.py /Users/jingtianyu/Documents/Codex/zlibrary-search/zlibrary_search.py
+INPUT: 本地模拟关键词 A/B、伪 PDF、HTML、HTTP 429；无外网书籍下载
+OUTPUT:
+PASS: local search/export/download/error handling
+COOKIE_SUPPORT=True
+EXIT: 0
+
+ROLLBACK_RESTORE
+COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/ROLLBACK.sh /Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/rollback-test.py
+INPUT: 本地模拟关键词 A/B、伪 PDF、HTML、HTTP 429；无外网书籍下载
+OUTPUT:
+ROLLBACK PASS: original bytes restored; previous file preserved
+EXIT: 0
+
+ROLLBACK
+COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/.venv/bin/python /Users/jingtianyu/Documents/Codex/zlibrary-search/test_local.py /Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/rollback-test.py
+INPUT: 本地模拟关键词 A/B、伪 PDF、HTML、HTTP 429；无外网书籍下载
+OUTPUT:
+PASS: local search/export/download/error handling
+COOKIE_SUPPORT=False
+EXIT: 0
+
+ENVIRONMENT
+COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/.venv/bin/python -m pip check
+INPUT: 本地模拟关键词 A/B、伪 PDF、HTML、HTTP 429；无外网书籍下载
+OUTPUT:
+No broken requirements found.
+EXIT: 0
+
+LAUNCHER
+COMMAND: '/Users/jingtianyu/Desktop/启动 Z-Library.command' --check
+INPUT: 本地模拟关键词 A/B、伪 PDF、HTML、HTTP 429；无外网书籍下载
+OUTPUT:
+环境检查通过：Python 3.12.14；zlibrary 1.0.2
+EXIT: 0
+
+LIVE_LOGIN
+COMMAND: /Users/jingtianyu/Documents/Codex/zlibrary-search/.venv/bin/python /Users/jingtianyu/Documents/Codex/zlibrary-search/zlibrary_search.py --check-login
+INPUT: 本机 Cookie（内容不记录）；只读取账号下载额度，不下载
+OUTPUT:
+已载入本机登录 Cookie。
+运行失败：ClientResponseError；HTTP 503。请检查网络或登录状态。
+EXIT: 1
+
+ROLLBACK_STATUS: 原始字节和原版行为已恢复到另一副本；COOKIE_SUPPORT=False。工作版本保持修改，COOKIE_SUPPORT=True。
+LIVE_STATUS: 服务返回 HTTP 503；页面标题 Checking your browser ...；账号有效性、真实搜索和书籍下载未验证。
+凭证保存在项目外的本机 Application Support/ZLibrary/cookies.txt，权限 600；未写入日志。
