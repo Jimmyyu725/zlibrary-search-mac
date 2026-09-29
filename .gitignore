@@ -6,3 +6,4 @@ downloads/
 zlibrary_results*.csv
 evidence/rollback-test.py
 evidence/rollback-test.py.before-rollback.*
+evidence/session-cookie/rollback-test.py*

@@ -256,12 +256,9 @@ def load_cookie_jar(path):
     from yarl import URL
 
     saved = http.cookiejar.MozillaCookieJar(str(path))
-    saved.load(ignore_discard=True, ignore_expires=True)
+    saved.load(ignore_discard=True)
     jar = aiohttp.CookieJar()
     for cookie in saved:
-        # Netscape exports use zero for session cookies, not an expired timestamp.
-        if cookie.expires not in (None, 0) and cookie.is_expired():
-            continue
         domain = cookie.domain.lstrip(".")
         if domain != "z-lib.gd" and not domain.endswith(".z-lib.gd"):
             continue

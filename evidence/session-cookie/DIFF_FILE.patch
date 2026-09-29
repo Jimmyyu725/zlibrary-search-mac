@@ -1,0 +1,16 @@
+--- /Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/session-cookie/BEFORE.py
++++ /Users/jingtianyu/Documents/Codex/zlibrary-search/zlibrary_search.py
+@@ -256,9 +256,12 @@
+     from yarl import URL
+ 
+     saved = http.cookiejar.MozillaCookieJar(str(path))
+-    saved.load(ignore_discard=True)
++    saved.load(ignore_discard=True, ignore_expires=True)
+     jar = aiohttp.CookieJar()
+     for cookie in saved:
++        # Netscape exports use zero for session cookies, not an expired timestamp.
++        if cookie.expires not in (None, 0) and cookie.is_expired():
++            continue
+         domain = cookie.domain.lstrip(".")
+         if domain != "z-lib.gd" and not domain.endswith(".z-lib.gd"):
+             continue

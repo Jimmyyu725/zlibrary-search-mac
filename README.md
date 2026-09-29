@@ -29,3 +29,6 @@
 
 ## 本次联网结果
 登录验证请求收到 HTTP 503；尚未确认 Cookie 有效，也未执行真实书籍下载。本地测试通过不等于线上服务可用。稍后可运行 `./.venv/bin/python zlibrary_search.py --check-login` 重试。
+
+### 会话 Cookie 修复
+已修复 Netscape 导出文件中 `expires=0` 被误判为过期的问题，并更新了本机凭证。再次联网验证仍收到 HTTP 503；无需反复导出相同 Cookie。修复及回退证据见 `evidence/session-cookie/VERIFICATION.txt`。

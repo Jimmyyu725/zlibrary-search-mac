@@ -1,0 +1,51 @@
+工作目录：/Users/jingtianyu/Documents/Codex/zlibrary-search
+分支：feature/macos-setup
+变更字段：load_cookie_jar 的 expires=0 分支；保留会话 Cookie，仍排除真正过期的 Cookie。
+MODIFIED_FILE=/Users/jingtianyu/Documents/Codex/zlibrary-search/zlibrary_search.py
+DIFF_FILE=/Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/session-cookie/DIFF_FILE.patch
+VERIFICATION=/Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/session-cookie/VERIFICATION.txt
+ROLLBACK=/Users/jingtianyu/Documents/Codex/zlibrary-search/evidence/session-cookie/ROLLBACK.sh
+BEFORE_SHA256=7baf48b55da74fb0860309e853035a7bea654b7d0ca924179492b96bc66a743e
+MODIFIED_SHA256=e2399b02e89b95940ffafdafe32c626f865d4ac230d864d85f99e6e38d37af61
+输入：模拟 Cookie，包含两个登录字段、一个 expires=0 会话字段和一个 expires=1 过期字段；不含真实凭证。
+
+BASELINE
+COMMAND: .venv/bin/python evidence/session-cookie/check.py evidence/session-cookie/BEFORE.py
+OUTPUT:
+SESSION_COOKIE=False; EXPIRED_COOKIE=False; DOMAIN_ISOLATION=True; HOST_ONLY=True
+EXIT: 1
+
+MODIFIED
+COMMAND: .venv/bin/python evidence/session-cookie/check.py zlibrary_search.py
+OUTPUT:
+SESSION_COOKIE=True; EXPIRED_COOKIE=False; DOMAIN_ISOLATION=True; HOST_ONLY=True
+EXIT: 0
+
+ROLLBACK_RESTORE
+COMMAND: evidence/session-cookie/ROLLBACK.sh evidence/session-cookie/rollback-test.py
+OUTPUT:
+ROLLBACK PASS: baseline bytes restored; modified copy preserved
+EXIT: 0
+
+ROLLBACK
+COMMAND: .venv/bin/python evidence/session-cookie/check.py evidence/session-cookie/rollback-test.py
+OUTPUT:
+SESSION_COOKIE=False; EXPIRED_COOKIE=False; DOMAIN_ISOLATION=True; HOST_ONLY=True
+EXIT: 1
+
+REGRESSION
+COMMAND: .venv/bin/python test_local.py zlibrary_search.py
+OUTPUT:
+PASS: local search/export/download/error handling
+COOKIE_SUPPORT=True
+EXIT: 0
+
+ROLLBACK_STATUS: 测试副本恢复原始字节及原有行为（会话 Cookie 被忽略，回归测试退出 1）；实际工作脚本保留修复。
+LIVE_LOGIN
+COMMAND: .venv/bin/python -u zlibrary_search.py --check-login
+INPUT: 用户更新的本机 Cookie；仅验证，不下载
+OUTPUT:
+已载入本机登录 Cookie。
+运行失败：ClientResponseError；HTTP 503。请检查网络或登录状态。
+EXIT: 1
+凭证已更新并读回核验；旧版本已单独保留；权限 600。未验证账号有效性、未下载书籍。
